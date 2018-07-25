@@ -1,0 +1,42 @@
+---
+- hosts: all
+  remote_user: ubuntu
+  become: yes
+  become_method: sudo
+  tasks:
+    - name: 'Copy ssh keys'
+      template:
+        src: '../key/id_rsa.pub'
+        dest: '/home/ubuntu/.ssh/id_rsa.pub'
+        mode: 0600
+        owner: ubuntu
+        group: ubuntu
+
+    - name: 'Create authorized_keys file'
+      shell: "cat /home/ubuntu/.ssh/id_rsa.pub >> /home/ubuntu/.ssh/authorized_keys"
+      args:
+        executable: /bin/bash
+
+    - name: 'Add MongoDB key'
+      apt_key:
+        keyserver: keyserver.ubuntu.com
+        id: '9DA31620334BD75D9DCB49F368818C72E52529D4'
+        #state: present
+
+    - name: 'Add MongoDB repo'
+      apt_repository:
+        repo: 'deb [ arch=amd64 ] https://repo.mongodb.org/apt/ubuntu xenial/mongodb-org/4.0 multiverse'
+        state: present
+
+    - name: 'Installing MongoDB'
+      apt:
+        name: mongodb-org
+        update-cache: yes
+
+    - name: 'Start MongoDB'
+      service: 
+        name: mongod
+        state: started
+
+    - name: 'Check if MongoDB is started'
+      command: "grep 'waiting for connections on port 27017' /var/log/mongodb/mongod.log"
